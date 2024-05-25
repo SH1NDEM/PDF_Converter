@@ -53,8 +53,8 @@ def download_google_docs_as_pdfs(folder_id, destination_folder, start_index, end
 # Пример использования:
 folder_id = '13AqHYhJVZNuzJQN8M6UNnjExM1zMVl6a'
 destination_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\downloaded_pdfs"
-start_index = 48  # Начальный индекс
-end_index = 50  # Конечный индекс
+start_index = 349  # Начальный индекс
+end_index = 415  # Конечный индекс
 creds_json = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Sources\pdf-converter-424314-8e8d5973c577.json"
 download_google_docs_as_pdfs(folder_id, destination_folder, start_index, end_index, creds_json)
 

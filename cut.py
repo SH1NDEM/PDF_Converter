@@ -1,6 +1,7 @@
 import cv2
 import os
 
+
 def crop_image_by_black_border(image_path, offset=10):
     # Загрузить изображение
     image = cv2.imread(image_path)
@@ -35,19 +36,33 @@ def process_images(input_folder, output_folder, offset=10):
     # Создать выходную папку, если она не существует
     os.makedirs(output_folder, exist_ok=True)
 
-    # Получить список всех файлов в папке
-    for filename in os.listdir(input_folder):
-        file_path = os.path.join(input_folder, filename)
-        if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            cropped_image = crop_image_by_black_border(file_path, offset)
-            output_path = os.path.join(output_folder, filename)
-            cv2.imwrite(output_path, cropped_image)
-            print(f'Processed and saved: {output_path}')
+    # Обойти все вложенные папки
+    for root, dirs, files in os.walk(input_folder):
+        for dir_name in dirs:
+            input_subfolder = os.path.join(root, dir_name)
+            output_subfolder = os.path.join(output_folder, dir_name)
+
+            # Создать выходную подпапку, если она не существует
+            os.makedirs(output_subfolder, exist_ok=True)
+
+            # Счетчик для имен файлов в каждой подпапке
+            file_counter = 1
+
+            # Получить список всех файлов в подпапке
+            for filename in os.listdir(input_subfolder):
+                file_path = os.path.join(input_subfolder, filename)
+                if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    cropped_image = crop_image_by_black_border(file_path, offset)
+                    output_filename = f"{file_counter}.jpg"
+                    output_path = os.path.join(output_subfolder, output_filename)
+                    cv2.imwrite(output_path, cropped_image)
+                    print(f'Processed and saved: {output_path}')
+                    file_counter += 1
 
 
 # Указание путей к папкам
-input_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Converted_pdfs\48"
-output_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\cut_jpgs"
+input_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Converted_pdfs"  # Путь к папке с PDF-файлами
+output_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\cut_jpgs"  # Путь к папке для сохранения изображений
 
 # Запуск обработки изображений
 process_images(input_folder, output_folder, offset=10)
