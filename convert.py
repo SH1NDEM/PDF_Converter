@@ -24,9 +24,12 @@ def convert_pdf_to_images(pdf_path, output_folder):
 
     pdf.close()
 
-# Пример использования
+# Пути:
 pdf_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\downloaded_pdfs"  # Путь к папке с PDF-файлами
 output_base_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Converted_pdfs"  # Путь к папке для сохранения изображений
+cut_jpgs = r"C:\Users\WILLMA\Desktop\PDF_Downloader\cut_jpgs"  # Путь к папке для сохранения изображений
+
+# Нумера файлов
 start_number = 349  # Начальный номер файла
 end_number = 415  # Конечный номер файла
 
@@ -35,3 +38,9 @@ for i in range(start_number, end_number + 1):
     pdf_path = os.path.join(pdf_folder, pdf_file)
     output_folder = os.path.join(output_base_folder, f"{i}")  # Папка для сохранения изображений
     convert_pdf_to_images(pdf_path, output_folder)
+
+# Указание путей к папкам
+cut_jpgs = r"C:\Users\WILLMA\Desktop\PDF_Downloader\cut_jpgs"  # Путь к папке для сохранения изображений
+
+# Запуск обработки изображений
+process_images(Converted_pdfs, cut_jpgs, offset=10)

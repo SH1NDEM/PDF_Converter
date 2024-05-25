@@ -1,4 +1,6 @@
 import os
+import cv2
+import fitz
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -25,9 +27,9 @@ def get_google_docs_ids(folder_id, creds_json):
 
     return file_ids
 
-def download_google_docs_as_pdfs(folder_id, destination_folder, start_index, end_index, creds_json):
-    if not os.path.exists(destination_folder):
-        os.makedirs(destination_folder)
+def download_google_docs_as_pdfs(folder_id, download_folder, start_index, end_index, creds_json):
+    if not os.path.exists(download_folder):
+        os.makedirs(download_folder)
 
     file_ids = get_google_docs_ids(folder_id, creds_json)
 
@@ -40,7 +42,7 @@ def download_google_docs_as_pdfs(folder_id, destination_folder, start_index, end
             file_number = int(file_name.split('.')[0])
             if start_index <= file_number <= end_index:
                 request = service.files().export_media(fileId=file_id, mimeType='application/pdf')
-                file_path = os.path.join(destination_folder, f"{file_name}.pdf")
+                file_path = os.path.join(download_folder, f"{file_name}.pdf")
 
                 with open(file_path, 'wb') as f:
                     f.write(request.execute())
@@ -50,11 +52,103 @@ def download_google_docs_as_pdfs(folder_id, destination_folder, start_index, end
             # Имя файла не начинается с числа, игнорируем его
             continue
 
-# Пример использования:
-folder_id = '13AqHYhJVZNuzJQN8M6UNnjExM1zMVl6a'
-destination_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\downloaded_pdfs"
-start_index = 349  # Начальный индекс
-end_index = 415  # Конечный индекс
-creds_json = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Sources\pdf-converter-424314-8e8d5973c577.json"
-download_google_docs_as_pdfs(folder_id, destination_folder, start_index, end_index, creds_json)
+#КОНВЕРТАЦИЯ В ИЗОБР
+def convert_pdf_to_images(pdf_path, Converted_pdfs):
+    if not os.path.isfile(pdf_path):
+        print(f"File does not exist: {pdf_path}")
+        return
 
+    pdf_name = os.path.splitext(os.path.basename(pdf_path))[0]
+
+    # Проверка существования папки, если нет - создать
+    if not os.path.exists(Converted_pdfs):
+        os.makedirs(Converted_pdfs)
+
+    print(f"Converting PDF to images: {pdf_path}")
+
+    pdf = fitz.open(pdf_path)
+
+    for page_num in range(pdf.page_count):
+        page = pdf.load_page(page_num)
+        image = page.get_pixmap()
+        image_path = os.path.join(Converted_pdfs, f"{pdf_name}_page_{page_num + 1}.jpg")
+        image.save(image_path)
+
+    pdf.close()
+
+#ОБРЕЗКА
+def crop_image_by_black_border(image_path, offset=10):
+    # Загрузить изображение
+    image = cv2.imread(image_path)
+
+    # Преобразовать изображение в оттенки серого
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Найти черную рамку внизу
+    _, thresh = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY_INV)
+
+    # Найти контуры
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Найти самый нижний контур
+    max_y = 0
+    for contour in contours:
+        _, y, _, h = cv2.boundingRect(contour)
+        if y + h > max_y:
+            max_y = y + h
+
+    # Обрезать изображение с учетом отступа
+    crop_y = max_y + offset
+    if crop_y > image.shape[0]:
+        crop_y = image.shape[0]
+
+    cropped_image = image[:crop_y, :]
+
+    return cropped_image
+
+
+def process_images(input_folder, output_folder, offset=10):
+    # Создать выходную папку, если она не существует
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Обойти все вложенные папки
+    for root, dirs, files in os.walk(input_folder):
+        for dir_name in dirs:
+            input_subfolder = os.path.join(root, dir_name)
+            output_subfolder = os.path.join(output_folder, dir_name)
+
+            # Создать выходную подпапку, если она не существует
+            os.makedirs(output_subfolder, exist_ok=True)
+
+            # Счетчик для имен файлов в каждой подпапке
+            file_counter = 1
+
+            # Получить список всех файлов в подпапке
+            for filename in os.listdir(input_subfolder):
+                file_path = os.path.join(input_subfolder, filename)
+                if os.path.isfile(file_path) and filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    cropped_image = crop_image_by_black_border(file_path, offset)
+                    output_filename = f"{file_counter}.jpg"
+                    output_path = os.path.join(output_subfolder, output_filename)
+                    cv2.imwrite(output_path, cropped_image)
+                    print(f'Processed and saved: {output_path}')
+                    file_counter += 1
+
+# Пути:
+folder_id = '13AqHYhJVZNuzJQN8M6UNnjExM1zMVl6a'                                                         # Путь к файлу с данными API
+pdf_folder = r"C:\Users\WILLMA\Desktop\PDF_Downloader\downloaded_pdfs"                                  # Путь к папке с PDF-файлами
+Converted_pdfs = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Converted_pdfs"                               # Путь к папке для сохранения изображений
+cut_jpgs = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Croped"                                             # Путь к папке для сохранения изображений
+creds_json = r"C:\Users\WILLMA\Desktop\PDF_Downloader\Sources\pdf-converter-424314-8e8d5973c577.json"   # Путь к файлу с данными API
+
+start_index = 414                                                                                       # Начальный индекс
+end_index = 415                                                                                         # Конечный индекс
+download_google_docs_as_pdfs(folder_id, pdf_folder, start_index, end_index, creds_json)                 # Вызов загрузки
+
+for i in range(start_index, end_index + 1):
+    pdf_file = f"{i}.pdf"
+    pdf_path = os.path.join(pdf_folder, pdf_file)
+    Converted_pdfs = os.path.join(Converted_pdfs, f"{i}")  # Папка для сохранения изображений
+    convert_pdf_to_images(pdf_path, Converted_pdfs)
+
+process_images(Converted_pdfs, cut_jpgs, offset=10)
